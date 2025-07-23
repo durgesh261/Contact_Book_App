@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Book Pro</title>
+    <!-- We will use the Tailwind CSS CDN directly for reliability -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom styles are now inside the HTML for simplicity -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* bg-gray-900 */
+        }
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 focus:ring-blue-500;
+        }
+        .btn-secondary {
+            @apply bg-gray-600 hover:bg-gray-700 focus:ring-gray-500;
+        }
+        .btn-green {
+             @apply bg-green-600 hover:bg-green-700 focus:ring-green-500;
+        }
+        .btn {
+            @apply px-4 py-2 rounded-lg font-semibold text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800;
+        }
+        .form-input {
+            @apply w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500;
+        }
+        /* Adding a subtle transition for the main views */
+        .view {
+            transition: opacity 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-gray-100">
+
+<div id="app-container" class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Login/Register View -->
+    <div id="auth-view" class="view w-full max-w-md">
+        <div class="text-center mb-8">
+            <i class="fas fa-address-book text-5xl text-blue-400"></i>
+            <h1 class="text-4xl font-bold text-white mt-4">Contact Book Pro</h1>
+            <p class="text-gray-400 mt-2">Sign in or create an account to continue</p>
+        </div>
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl">
+            <form id="login-form">
+                <h2 id="form-title" class="text-2xl font-semibold text-center mb-6">Login</h2>
+                <div id="auth-error" class="hidden text-red-400 text-center mb-4 p-3 bg-red-900/50 rounded-lg"></div>
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" id="username" class="form-input" placeholder="e.g., johndoe" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="auth-submit-btn" class="w-full btn btn-primary">Login</button>
+            </form>
+            <p class="text-center text-sm text-gray-400 mt-6">
+                <span id="toggle-text">Don't have an account?</span>
+                <a href="#" id="toggle-auth-mode" class="font-semibold text-blue-400 hover:text-blue-300">Register here</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main App View (Dashboard) -->
+    <div id="main-view" class="view hidden w-full max-w-5xl">
+        <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
+            <h1 class="text-3xl font-bold">Welcome, <span id="welcome-username"></span>!</h1>
+            <div>
+                <button id="add-contact-btn" class="btn btn-green">
+                    <i class="fas fa-plus mr-2"></i>Add Contact
+                </button>
+                <button id="logout-btn" class="btn btn-secondary ml-4">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </header>
+
+        <div class="flex flex-wrap justify-between items-center mb-6 bg-gray-800 p-4 rounded-lg gap-4">
+            <div class="relative flex-grow sm:flex-grow-0">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <i class="fas fa-search"></i>
+                    </span>
+                <input type="text" id="search-input" class="form-input pl-10 w-full sm:w-64" placeholder="Search contacts...">
+            </div>
+            <div class="flex items-center">
+                <label for="sort-select" class="mr-2 text-gray-300">Sort by:</label>
+                <select id="sort-select" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="name_asc">Name (A-Z)</option>
+                    <option value="name_desc">Name (Z-A)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="contact-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Contact cards will be dynamically injected here -->
+        </div>
+        <p id="no-contacts-msg" class="hidden text-center text-gray-400 mt-10 text-lg">Your contact book is empty. Add a new contact to get started!</p>
+    </div>
+</div>
+
+<!-- Add/Edit Contact Modal -->
+<div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all">
+        <h2 id="modal-title" class="text-2xl font-bold mb-6 text-center">Add New Contact</h2>
+        <form id="contact-form">
+            <input type="hidden" id="contact-id">
+            <div id="contact-error" class="hidden text-red-400 text-center mb-4 p-3 bg-red-900/50 rounded-lg"></div>
+            <div class="mb-4">
+                <label for="contact-name" class="block text-sm font-medium text-gray-300 mb-2">Name</label>
+                <input type="text" id="contact-name" class="form-input" required>
+            </div>
+            <div class="mb-4">
+                <label for="contact-phone" class="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
+                <input type="tel" id="contact-phone" class="form-input" required>
+            </div>
+            <div class="mb-6">
+                <label for="contact-email" class="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                <input type="email" id="contact-email" class="form-input" required>
+            </div>
+            <div class="flex justify-end gap-4">
+                <button type="button" id="cancel-modal-btn" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Contact</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- All JavaScript is now inside the HTML file -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- STATE MANAGEMENT ---
+        let isLoginMode = true;
+        let contacts = [];
+        let currentSort = 'name_asc';
+        let currentUsername = null;
+
+        // --- DOM ELEMENTS ---
+        const authView = document.getElementById('auth-view');
+        const mainView = document.getElementById('main-view');
+        const loginForm = document.getElementById('login-form');
+        const toggleAuthLink = document.getElementById('toggle-auth-mode');
+        const formTitle = document.getElementById('form-title');
+        const toggleText = document.getElementById('toggle-text');
+        const authSubmitBtn = document.getElementById('auth-submit-btn');
+        const authError = document.getElementById('auth-error');
+
+        const welcomeUsername = document.getElementById('welcome-username');
+        const logoutBtn = document.getElementById('logout-btn');
+        const addContactBtn = document.getElementById('add-contact-btn');
+        const contactList = document.getElementById('contact-list');
+        const noContactsMsg = document.getElementById('no-contacts-msg');
+
+        const contactModal = document.getElementById('contact-modal');
+        const contactForm = document.getElementById('contact-form');
+        const modalTitle = document.getElementById('modal-title');
+        const cancelModalBtn = document.getElementById('cancel-modal-btn');
+        const contactIdInput = document.getElementById('contact-id');
+        const contactError = document.getElementById('contact-error');
+
+        const searchInput = document.getElementById('search-input');
+        const sortSelect = document.getElementById('sort-select');
+
+        // --- API CONFIG ---
+        const API_BASE_URL = '/api';
+
+        // --- UTILITY FUNCTIONS ---
+        const showAuthError = (message) => {
+            authError.textContent = message;
+            authError.classList.remove('hidden');
+        };
+        const hideAuthError = () => authError.classList.add('hidden');
+
+        const showContactError = (message) => {
+            contactError.textContent = message;
+            contactError.classList.remove('hidden');
+        };
+        const hideContactError = () => contactError.classList.add('hidden');
+
+        // --- UI TOGGLE FUNCTIONS ---
+        const toggleAuthMode = () => {
+            isLoginMode = !isLoginMode;
+            hideAuthError();
+            loginForm.reset();
+            if (isLoginMode) {
+                formTitle.textContent = 'Login';
+                authSubmitBtn.textContent = 'Login';
+                toggleText.textContent = "Don't have an account? ";
+                toggleAuthLink.textContent = 'Register here';
+            } else {
+                formTitle.textContent = 'Register';
+                authSubmitBtn.textContent = 'Create Account';
+                toggleText.textContent = 'Already have an account? ';
+                toggleAuthLink.textContent = 'Login here';
+            }
+        };
+
+        const showMainView = () => {
+            authView.classList.add('hidden');
+            mainView.classList.remove('hidden');
+            welcomeUsername.textContent = currentUsername;
+            fetchContacts();
+        };
+
+        const showAuthView = () => {
+            mainView.classList.add('hidden');
+            authView.classList.remove('hidden');
+            currentUsername = null;
+            isLoginMode = true;
+            formTitle.textContent = 'Login';
+            authSubmitBtn.textContent = 'Login';
+            toggleText.textContent = "Don't have an account? ";
+            toggleAuthLink.textContent = 'Register here';
+        };
+
+        const showModal = (contact = null) => {
+            hideContactError();
+            contactForm.reset();
+            if (contact) {
+                modalTitle.textContent = 'Edit Contact';
+                contactIdInput.value = contact.id;
+                document.getElementById('contact-name').value = contact.name;
+                document.getElementById('contact-phone').value = contact.phoneNumber;
+                document.getElementById('contact-email').value = contact.email;
+            } else {
+                modalTitle.textContent = 'Add New Contact';
+                contactIdInput.value = '';
+            }
+            contactModal.classList.remove('hidden');
+        };
+
+        const hideModal = () => {
+            contactModal.classList.add('hidden');
+        };
+
+        // --- RENDER FUNCTIONS ---
+        const renderContacts = () => {
+            const searchTerm = searchInput.value.toLowerCase();
+
+            let filteredContacts = contacts.filter(c =>
+                c.name.toLowerCase().includes(searchTerm) ||
+                c.phoneNumber.toLowerCase().includes(searchTerm) ||
+                c.email.toLowerCase().includes(searchTerm)
+            );
+
+            const [key, order] = currentSort.split('_');
+            filteredContacts.sort((a, b) => {
+                const valA = a.name.toLowerCase();
+                const valB = b.name.toLowerCase();
+                if (valA < valB) return order === 'asc' ? -1 : 1;
+                if (valA > valB) return order === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            contactList.innerHTML = '';
+            if (filteredContacts.length === 0 && searchTerm === '') {
+                noContactsMsg.classList.remove('hidden');
+            } else {
+                noContactsMsg.classList.add('hidden');
+                filteredContacts.forEach(contact => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-800 p-5 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 flex flex-col h-full';
+                    card.innerHTML = `
+                        <div class="flex-grow">
+                            <h3 class="text-xl font-bold text-white">${contact.name}</h3>
+                            <p class="text-gray-400 mt-2"><i class="fas fa-phone-alt mr-2 text-blue-400"></i>${contact.phoneNumber}</p>
+                            <p class="text-gray-400 mt-1"><i class="fas fa-envelope mr-2 text-blue-400"></i>${contact.email}</p>
+                        </div>
+                        <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-700">
+                            <button class="text-yellow-400 hover:text-yellow-300 edit-btn" data-id="${contact.id}"><i class="fas fa-edit"></i> Edit</button>
+                            <button class="text-red-400 hover:text-red-300 delete-btn" data-id="${contact.id}"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    `;
+                    contactList.appendChild(card);
+                });
+            }
+        };
+
+        // --- API CALLS ---
+        const handleAuth = async (event) => {
+            event.preventDefault();
+            hideAuthError();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (isLoginMode) {
+                try {
+                    const formData = new URLSearchParams();
+                    formData.append('username', username);
+                    formData.append('password', password);
+
+                    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Invalid username or password.');
+                    }
+                    currentUsername = username;
+                    showMainView();
+                } catch (error) {
+                    showAuthError(error.message);
+                }
+            } else {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(errorText || 'Registration failed.');
+                    }
+                    alert('Registration successful! Please log in.');
+                    toggleAuthMode();
+                } catch (error) {
+                    showAuthError(error.message);
+                }
+            }
+        };
+
+        const fetchContacts = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/contacts`);
+                if (response.status === 401) {
+                    showAuthView();
+                    return;
+                }
+                if (!response.ok) throw new Error('Could not fetch contacts.');
+                contacts = await response.json();
+                renderContacts();
+            } catch (error) {
+                console.error(error);
+            }
+        };
+
+        const handleSaveContact = async (event) => {
+            event.preventDefault();
+            hideContactError();
+
+            const id = contactIdInput.value;
+            const contactData = {
+                name: document.getElementById('contact-name').value,
+                phoneNumber: document.getElementById('contact-phone').value,
+                email: document.getElementById('contact-email').value
+            };
+
+            const isEditing = !!id;
+            const url = isEditing ? `${API_BASE_URL}/contacts/${id}` : `${API_BASE_URL}/contacts`;
+            const method = isEditing ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(contactData)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to save contact.');
+                }
+
+                hideModal();
+                fetchContacts();
+
+            } catch (error) {
+                showContactError(error.message);
+            }
+        };
+
+        const handleDeleteContact = async (id) => {
+            if (!confirm('Are you sure you want to delete this contact?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/contacts/${id}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) throw new Error('Failed to delete contact.');
+                fetchContacts();
+            } catch (error) {
+                console.error(error);
+                alert(error.message);
+            }
+        };
+
+        const handleLogout = async () => {
+            try {
+                await fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST' });
+            } catch (error) {
+                console.error("Logout failed", error);
+            } finally {
+                showAuthView();
+            }
+        };
+
+        // --- EVENT LISTENERS ---
+        loginForm.addEventListener('submit', handleAuth);
+        toggleAuthLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleAuthMode();
+        });
+
+        logoutBtn.addEventListener('click', handleLogout);
+        addContactBtn.addEventListener('click', () => showModal());
+        cancelModalBtn.addEventListener('click', hideModal);
+        contactForm.addEventListener('submit', handleSaveContact);
+
+        contactList.addEventListener('click', (e) => {
+            const editButton = e.target.closest('.edit-btn');
+            if (editButton) {
+                const id = editButton.dataset.id;
+                const contactToEdit = contacts.find(c => c.id == id);
+                showModal(contactToEdit);
+            }
+
+            const deleteButton = e.target.closest('.delete-btn');
+            if (deleteButton) {
+                const id = deleteButton.dataset.id;
+                handleDeleteContact(id);
+            }
+        });
+
+        searchInput.addEventListener('input', renderContacts);
+        sortSelect.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            renderContacts();
+        });
+
+        // --- INITIALIZATION ---
+        const init = async () => {
+            try {
+                 const response = await fetch('/api/users/me');
+                 if (response.ok) {
+                     const user = await response.json();
+                     currentUsername = user.username;
+                     showMainView();
+                 } else {
+                     showAuthView();
+                 }
+            } catch (e) {
+                showAuthView();
+            }
+        };
+
+        init();
+    });
+</script>
+</body>
+</html>
