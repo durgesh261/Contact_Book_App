@@ -7,6 +7,5 @@ import java.util.List;
 
 @Repository
 public interface ContactRepository extends JpaRepository<Contact, Long> {
-    // Finds all contacts associated with a specific user's username
     List<Contact> findByUser_Username(String username);
 }

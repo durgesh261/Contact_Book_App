@@ -20,12 +20,18 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody User user) {
-        if (user.getUsername() == null || user.getUsername().trim().isEmpty() || user.getPassword() == null || user.getPassword().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username and password cannot be empty");
+        if (user.getUsername() == null || user.getUsername().trim().isEmpty()
+                || user.getPassword() == null || user.getPassword().isEmpty()
+                || user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username, password, and email cannot be empty");
         }
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username is already taken!");
         }
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is already registered!");
+        }
+
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
         return ResponseEntity.ok("User registered successfully!");

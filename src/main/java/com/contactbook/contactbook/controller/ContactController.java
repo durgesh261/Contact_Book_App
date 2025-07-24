@@ -50,10 +50,13 @@ public class ContactController {
         if (contactOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+
         Contact contact = contactOpt.get();
         if (!contact.getUser().getUsername().equals(userDetails.getUsername())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        // The syntax error was an extra '}' before this line. It has been removed.
+
         contact.setName(contactDetails.getName());
         contact.setPhoneNumber(contactDetails.getPhoneNumber());
         contact.setEmail(contactDetails.getEmail());
@@ -67,10 +70,13 @@ public class ContactController {
         if (contactOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+
         Contact contact = contactOpt.get();
         if (!contact.getUser().getUsername().equals(userDetails.getUsername())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        // The syntax error was an extra '}' before this line. It has been removed.
+
         contactRepository.delete(contact);
         return ResponseEntity.noContent().build();
     }

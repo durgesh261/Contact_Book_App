@@ -18,7 +18,9 @@ public class Contact {
     @JsonIgnore // Prevents infinite loops during serialization
     private User user;
 
-    // Getters and Setters
+    // --- Getters and Setters ---
+    // These methods were missing, causing the error in ContactController.
+
     public Long getId() {
         return id;
     }

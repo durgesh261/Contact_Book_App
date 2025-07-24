@@ -19,22 +19,28 @@
             font-family: 'Inter', sans-serif;
             background-color: #111827; /* bg-gray-900 */
         }
-        .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-700 focus:ring-blue-500;
-        }
-        .btn-secondary {
-            @apply bg-gray-600 hover:bg-gray-700 focus:ring-gray-500;
-        }
-        .btn-green {
-             @apply bg-green-600 hover:bg-green-700 focus:ring-green-500;
-        }
         .btn {
             @apply px-4 py-2 rounded-lg font-semibold text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800;
         }
+        .btn-primary { @apply bg-blue-600 hover:bg-blue-700 focus:ring-blue-500; }
+        .btn-secondary { @apply bg-gray-600 hover:bg-gray-700 focus:ring-gray-500; }
+        .btn-green { @apply bg-green-600 hover:bg-green-700 focus:ring-green-500; }
+
+        /* Updated input box style to "light black" */
         .form-input {
-            @apply w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500;
+            @apply w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500;
         }
-        /* Adding a subtle transition for the main views */
+
+        /* THIS IS THE FIX: Overrides browser autofill styles more aggressively */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            transition: background-color 5000s ease-in-out 0s; /* Hack to prevent style change */
+            -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important; /* Matches bg-gray-800 */
+            -webkit-text-fill-color: #fff !important;
+        }
+
         .view {
             transition: opacity 0.5s ease-in-out;
         }
@@ -55,9 +61,17 @@
             <form id="login-form">
                 <h2 id="form-title" class="text-2xl font-semibold text-center mb-6">Login</h2>
                 <div id="auth-error" class="hidden text-red-400 text-center mb-4 p-3 bg-red-900/50 rounded-lg"></div>
+
+                <!-- Email Field (hidden by default, shown for registration) -->
+                <div id="email-field" class="mb-4 hidden">
+                    <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                    <input type="email" id="email" class="form-input" placeholder="user@example.com">
+                </div>
+
                 <div class="mb-4">
-                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                    <input type="text" id="username" class="form-input" placeholder="e.g., johndoe" required>
+                    <!-- Updated label for username/email login -->
+                    <label for="username" id="username-label" class="block text-sm font-medium text-gray-300 mb-2">Username or Email</label>
+                    <input type="text" id="username" class="form-input" placeholder="johndoe or user@example.com" required>
                 </div>
                 <div class="mb-6">
                     <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
@@ -91,7 +105,8 @@
                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                         <i class="fas fa-search"></i>
                     </span>
-                <input type="text" id="search-input" class="form-input pl-10 w-full sm:w-64" placeholder="Search contacts...">
+                <!-- THIS IS THE LINE THAT WAS CHANGED -->
+                <input type="text" id="search-input" class="form-input text-gray-900 pl-10 w-full sm:w-64" placeholder="Search contacts...">
             </div>
             <div class="flex items-center">
                 <label for="sort-select" class="mr-2 text-gray-300">Sort by:</label>
@@ -149,6 +164,9 @@
         const authView = document.getElementById('auth-view');
         const mainView = document.getElementById('main-view');
         const loginForm = document.getElementById('login-form');
+        const emailField = document.getElementById('email-field');
+        const emailInput = document.getElementById('email');
+        const usernameLabel = document.getElementById('username-label');
         const toggleAuthLink = document.getElementById('toggle-auth-mode');
         const formTitle = document.getElementById('form-title');
         const toggleText = document.getElementById('toggle-text');
@@ -197,11 +215,22 @@
                 authSubmitBtn.textContent = 'Login';
                 toggleText.textContent = "Don't have an account? ";
                 toggleAuthLink.textContent = 'Register here';
+
+                // Hide email field for login and update username label
+                emailField.classList.add('hidden');
+                usernameLabel.textContent = 'Username or Email';
+                emailInput.required = false;
+
             } else {
                 formTitle.textContent = 'Register';
                 authSubmitBtn.textContent = 'Create Account';
                 toggleText.textContent = 'Already have an account? ';
                 toggleAuthLink.textContent = 'Login here';
+
+                // Show email field for registration and update username label
+                emailField.classList.remove('hidden');
+                usernameLabel.textContent = 'Username';
+                emailInput.required = true;
             }
         };
 
@@ -221,6 +250,9 @@
             authSubmitBtn.textContent = 'Login';
             toggleText.textContent = "Don't have an account? ";
             toggleAuthLink.textContent = 'Register here';
+            emailField.classList.add('hidden');
+            usernameLabel.textContent = 'Username or Email';
+            emailInput.required = false;
         };
 
         const showModal = (contact = null) => {
@@ -249,8 +281,8 @@
 
             let filteredContacts = contacts.filter(c =>
                 c.name.toLowerCase().includes(searchTerm) ||
-                c.phoneNumber.toLowerCase().includes(searchTerm) ||
-                c.email.toLowerCase().includes(searchTerm)
+                (c.phoneNumber && c.phoneNumber.toLowerCase().includes(searchTerm)) ||
+                (c.email && c.email.toLowerCase().includes(searchTerm))
             );
 
             const [key, order] = currentSort.split('_');
@@ -263,8 +295,13 @@
             });
 
             contactList.innerHTML = '';
-            if (filteredContacts.length === 0 && searchTerm === '') {
+            if (filteredContacts.length === 0) {
                 noContactsMsg.classList.remove('hidden');
+                if (searchTerm !== '') {
+                    noContactsMsg.textContent = `No contacts found for "${searchTerm}".`
+                } else {
+                    noContactsMsg.textContent = `Your contact book is empty. Add a new contact to get started!`
+                }
             } else {
                 noContactsMsg.classList.add('hidden');
                 filteredContacts.forEach(contact => {
@@ -273,8 +310,8 @@
                     card.innerHTML = `
                         <div class="flex-grow">
                             <h3 class="text-xl font-bold text-white">${contact.name}</h3>
-                            <p class="text-gray-400 mt-2"><i class="fas fa-phone-alt mr-2 text-blue-400"></i>${contact.phoneNumber}</p>
-                            <p class="text-gray-400 mt-1"><i class="fas fa-envelope mr-2 text-blue-400"></i>${contact.email}</p>
+                            <p class="text-gray-400 mt-2"><i class="fas fa-phone-alt mr-2 text-blue-400"></i>${contact.phoneNumber || 'N/A'}</p>
+                            <p class="text-gray-400 mt-1"><i class="fas fa-envelope mr-2 text-blue-400"></i>${contact.email || 'N/A'}</p>
                         </div>
                         <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-700">
                             <button class="text-yellow-400 hover:text-yellow-300 edit-btn" data-id="${contact.id}"><i class="fas fa-edit"></i> Edit</button>
@@ -290,13 +327,14 @@
         const handleAuth = async (event) => {
             event.preventDefault();
             hideAuthError();
-            const username = document.getElementById('username').value;
+            const usernameInput = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
             if (isLoginMode) {
                 try {
                     const formData = new URLSearchParams();
-                    formData.append('username', username);
+                    // The backend's `loadUserByUsername` parameter is `usernameOrEmail`, so we send the input under the key "username"
+                    formData.append('username', usernameInput);
                     formData.append('password', password);
 
                     const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -305,20 +343,22 @@
                         body: formData
                     });
 
-                    if (!response.ok) {
-                        throw new Error('Invalid username or password.');
-                    }
-                    currentUsername = username;
+                    if (!response.ok) { throw new Error('Invalid credentials.'); }
+
+                    currentUsername = usernameInput.includes('@') ? usernameInput.split('@')[0] : usernameInput;
                     showMainView();
                 } catch (error) {
                     showAuthError(error.message);
                 }
             } else {
+                // Registration logic
+                const email = emailInput.value;
+                const username = document.getElementById('username').value;
                 try {
                     const response = await fetch(`${API_BASE_URL}/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password })
+                        body: JSON.stringify({ username, email, password })
                     });
 
                     if (!response.ok) {
